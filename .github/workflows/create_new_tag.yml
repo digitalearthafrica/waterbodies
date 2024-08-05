@@ -5,6 +5,8 @@ on:
         - closed
     branches:
         - main
+    paths-ignore:
+      - '.github/**'
    
 jobs:
   bump_version:
