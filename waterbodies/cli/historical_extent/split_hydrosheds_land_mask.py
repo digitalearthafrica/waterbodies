@@ -6,6 +6,7 @@ import geopandas as gpd
 import numpy as np
 import rioxarray  # noqa F401
 from datacube import Datacube
+from odc.geo.xr import to_cog
 from tqdm import tqdm
 
 from waterbodies.grid import WaterbodiesGrid
@@ -119,6 +120,9 @@ def split_hydrosheds_land_mask(
             # Indicator values: 1 = land, 2 = ocean sink, 3 = inland sink, 255 is no data.
             tile_raster = np.logical_or(
                 tile_hydrosheds_land_mask == 1, tile_hydrosheds_land_mask == 3
-            ).astype(int)
+            ).astype(np.int32)
+            # Compress xarray.DataArray into Cloud Optimized GeoTiff bytes in memory.
+            cog_bytes = to_cog(geo_im=tile_raster)
             # Write to file
-            tile_raster.rio.to_raster(tile_raster_fp)
+            with fs.open(tile_raster_fp, "wb") as file:
+                file.write(cog_bytes)
