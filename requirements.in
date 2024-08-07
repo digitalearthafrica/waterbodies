@@ -1,0 +1,2 @@
+# To match gdal version in osgeo/gdal base image
+gdal==3.6.3 
