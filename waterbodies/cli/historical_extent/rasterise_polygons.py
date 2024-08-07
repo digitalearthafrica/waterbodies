@@ -6,7 +6,7 @@ import click
 import geopandas as gpd
 import rioxarray  # noqa F401
 from datacube import Datacube
-from odc.geo.xr import wrap_xr
+from odc.geo.xr import to_cog, wrap_xr
 from rasterio.features import rasterize
 from tqdm import tqdm
 
@@ -73,6 +73,7 @@ def rasterise_polygons(
     historical_extent_polygons = historical_extent_polygons.to_crs(gridspec.crs)
     historical_extent_polygons.set_index("wb_id", inplace=True)
 
+    fs = get_filesystem(historical_extent_rasters_directory, anon=False)
     with tqdm(
         iterable=tiles, desc="Rasterise historical extent polygons by grid tile", total=len(tiles)
     ) as tiles:
@@ -100,7 +101,7 @@ def rasterise_polygons(
                 tile_raster_np = rasterize(
                     shapes=shapes, out_shape=tile_geobox.shape, transform=tile_geobox.transform
                 )
-                tile_raster_ds = wrap_xr(im=tile_raster_np, gbox=tile_geobox)
+                tile_raster_da = wrap_xr(im=tile_raster_np, gbox=tile_geobox)
                 # Add a dictionary mapping the wb_id values to the uid values as part of the
                 # metadata of the raster.
                 tags = dict(
@@ -113,4 +114,8 @@ def rasterise_polygons(
                     historical_extent_rasters_directory,
                     f"{get_tile_index_str_from_tuple(tile_index)}.tif",
                 )
-                tile_raster_ds.rio.to_raster(raster_path=raster_path, tags=tags, compute=True)
+                # Compress xarray.DataArray into Cloud Optimized GeoTiff bytes in memory.
+                cog_bytes = to_cog(geo_im=tile_raster_da, tags=tags)
+                # Write to file
+                with fs.open(raster_path, "wb") as file:
+                    file.write(cog_bytes)
