@@ -25,7 +25,7 @@ dependencies = [
     "odc-dscache",
     "odc-geo",
     "odc-stats",
-    "pandas",
+    "pandas<2.2.0",
     "python-dotenv",
     "python-geohash",
     "rasterio",
