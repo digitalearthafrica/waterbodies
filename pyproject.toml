@@ -40,15 +40,22 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pre-commit",
-    "black[jupyter]",
-    "isort>=5.0.0",
-    "flake8",
-    "mypy",
-    "odc-apps-dc-tools",
+tests = [
     "pytest",
     "coverage",
+    "odc-apps-dc-tools",
+]
+lint = [
+    "black[jupyter]",
+    # TODO remove constraint after the next sandbox image upgrade
+    "flake8",
+    "mypy",
+    "isort>=5.0.0",
+    "pre-commit",
+]
+dev = [
+    "pip-tools",
+    "waterbodies[tests, lint]",
 ]
 
 [project.urls]
@@ -62,7 +69,6 @@ waterbodies = "waterbodies.cli.main:waterbodies"
 packages = ["waterbodies"]
 
 [tool.setuptools.dynamic]
-dependencies = { file = ["requirements.in"] }
 version = {attr = "waterbodies.__version__"}
 
 [tool.setuptools_scm]
