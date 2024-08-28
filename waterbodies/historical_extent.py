@@ -2,6 +2,7 @@ import logging
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import xarray as xr
 from datacube import Datacube
 from rasterio.features import shapes
@@ -571,3 +572,68 @@ def get_polygon_length(poly: Polygon) -> float:
     # width = min(edge_length)
 
     return length
+
+
+def get_waterbody_timeseries(
+    engine: Engine, uid: str, start_date: str, end_date: str
+) -> pd.DataFrame:
+    """
+    Get the timeseries for a waterbody.
+    Parameters
+    ----------
+    engine : Engine
+    uid : str
+        Unique string ID for a waterbody
+    start_date: str
+        Start date for the time range to filter the timeseries to.
+    end_date: str
+        End date for the time range to filter the timeseries to.
+
+    Returns
+    -------
+    pd.DataFrame
+        Timeseries for the waterbody.
+    """
+    # Get the actual area of the waterbody
+    part_1 = (
+        "WITH wb AS "
+        "(SELECT uid, area_m2 AS actual_area_m2 FROM waterbodies_historical_extent "
+        f"WHERE uid = '{uid}')"
+    )
+
+    # Get all observations for the waterbody.
+    part_2 = (
+        "wbo AS "
+        "(SELECT wo.*, wb.actual_area_m2 FROM waterbodies_observations AS wo "
+        "INNER JOIN wb ON wo.uid = wb.uid "
+        f"WHERE wo.date BETWEEN '{start_date}' AND '{end_date}')"
+    )
+
+    # Get timeseries statistics from observations
+    part_3 = (
+        "waterbody_stats AS "
+        "(SELECT date,  SUM(area_wet_m2) AS area_wet_m2, SUM(area_dry_m2) AS area_dry_m2, "
+        "SUM(area_invalid_m2) AS area_invalid_m2, "
+        "SUM(area_wet_m2 + area_dry_m2 + area_invalid_m2) AS area_observed_m2, "
+        "actual_area_m2 FROM  wbo GROUP BY date, actual_area_m2)"
+    )
+    part_4 = (
+        "waterbody_stats_pc AS "
+        "(SELECT date, area_wet_m2, (area_wet_m2/actual_area_m2) * 100 AS percent_wet, "
+        "area_dry_m2, (area_dry_m2/actual_area_m2) * 100 AS percent_dry, area_invalid_m2, "
+        "(area_invalid_m2/actual_area_m2) * 100 AS percent_invalid, area_observed_m2, "
+        "(area_observed_m2/actual_area_m2) * 100 AS percent_observed FROM waterbody_stats)"
+    )
+
+    # Get the valid observations
+    part_5 = (
+        "filtered_stats AS "
+        "(SELECT * FROM waterbody_stats_pc WHERE percent_observed > 85 AND percent_invalid < 5)"
+    )
+
+    final_select_query = "SELECT * FROM filtered_stats ORDER BY date"
+    sql_query = f"{part_1}, {part_2}, {part_3}, {part_4}, {part_5} {final_select_query}"
+
+    timeseries = pd.read_sql(con=engine, sql=sql_query)
+
+    return timeseries
