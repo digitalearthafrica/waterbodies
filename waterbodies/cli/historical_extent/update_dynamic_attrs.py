@@ -1,0 +1,130 @@
+import json
+import logging
+import os
+from datetime import datetime
+from itertools import chain
+
+import click
+from sqlalchemy import exists, select, update
+from sqlalchemy.orm import sessionmaker
+
+from waterbodies.db import get_waterbodies_engine
+from waterbodies.historical_extent import (
+    create_waterbodies_historical_extent_table,
+    get_waterbody_timeseries,
+)
+from waterbodies.io import check_directory_exists, get_filesystem
+from waterbodies.logs import logging_setup
+
+
+@click.command(
+    name="update-dynamic-attrs",
+    help="Update the dynamic attrs table for a list of waterbodies.",
+    no_args_is_help=True,
+)
+@click.option("-v", "--verbose", default=1, count=True)
+@click.option(
+    "--uids-list-file",
+    type=str,
+    help="Path to the text file containing the list of waterbody uids.",
+)
+def update_dynamic_attrs(verbose, uids_list_file):
+    logging_setup(verbose)
+    _log = logging.getLogger(__name__)
+
+    engine = get_waterbodies_engine()
+
+    Session = sessionmaker(bind=engine)
+
+    table = create_waterbodies_historical_extent_table(engine=engine)
+
+    fs = get_filesystem(path=uids_list_file, anon=True)
+    with fs.open(uids_list_file) as file:
+        content = file.read()
+        decoded_content = content.decode()
+        uids = json.loads(decoded_content)
+
+    # In case file contains list of lists
+    if all(isinstance(item, list) for item in uids):
+        uids = list(chain(*uids))
+    else:
+        pass
+
+    failed_uids = []
+    for idx, uid in enumerate(uids):
+        _log.info(f"Updating waterbody: {uid}   {idx + 1}/{len(uids)}")
+
+        try:
+            # Check the uid provided exists in the waterbodies_historical_extent table.
+            with Session.begin() as session:
+                # Query to check if the specific uid exists in the table
+                exists_query = select(exists().where(table.c.uid == uid))
+                exists_result = session.execute(exists_query).scalar()
+
+            if not exists_result:
+                e = ValueError(
+                    f"UID {uid} does not exist in the waterbodies_historical_extent table"
+                )
+                _log.error(e)
+                raise e
+
+            _log.info(f"Updating last valid observation date and wetness for waterbody {uid}")
+
+            start_date: str = "1984-01-01"
+            end_date: str = datetime.now().strftime("%Y-%m-%d")
+
+            timeseries = get_waterbody_timeseries(
+                engine=engine, uid=uid, start_date=start_date, end_date=end_date
+            ).sort_values(by="date")
+            valid_timeseries = timeseries[
+                (timeseries["percent_observed"] > 85) & (timeseries["percent_invalid"] < 5)
+            ].sort_values(by="date")
+
+            # Most recent date the waterbody was observed
+            last_obs_date = timeseries.date.iloc[-1].strftime("%Y-%m-%d")
+
+            # Most recent date a valid wet observation was recorded for the waterbody.
+            last_valid_obs_date = valid_timeseries.date.iloc[-1].strftime("%Y-%m-%d")
+            # Most recent valid wet observation for the waterbody (%)
+            last_valid_obs = valid_timeseries.percent_wet.iloc[-1]
+
+            # The date that the last_obs_date, last_valid_obs_date and last_valid_obs attributes
+            # were last updated.
+            last_update_date = datetime.today().strftime("%Y-%m-%d")
+
+            # Update the attributes
+            update_statement = (
+                update(table)
+                .where(table.c.uid == uid)
+                .values(
+                    dict(
+                        last_obs_date=last_obs_date,
+                        last_valid_obs_date=last_valid_obs_date,
+                        last_valid_obs=last_valid_obs,
+                        last_update_date=last_update_date,
+                    )
+                )
+            )
+
+            with Session.begin() as session:
+                session.execute(update_statement)
+        except Exception as error:
+            _log.exception(error)
+            _log.error(f"Failed to update dynamic attributes for waterbody {uid}")
+            failed_uids.append(uid)
+
+    if failed_uids:
+        failed_uids_json_array = json.dumps(failed_uids)
+
+        output_directory = "/tmp/"
+        failed_uids_output_file = os.path.join(output_directory, "failed_uids")
+
+        fs = get_filesystem(path=output_directory, anon=False)
+
+        if not check_directory_exists(path=output_directory):
+            fs.mkdirs(path=output_directory, exist_ok=True)
+            _log.info(f"Created directory {output_directory}")
+
+        with fs.open(failed_uids_output_file, "a") as file:
+            file.write(failed_uids_json_array + "\n")
+        _log.info(f"Failed uids written to {failed_uids_output_file}")
