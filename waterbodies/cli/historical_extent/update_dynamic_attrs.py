@@ -58,7 +58,7 @@ def update_dynamic_attrs(verbose, uids_list_file):
 
     failed_uids = []
     for idx, uid in enumerate(uids):
-        _log.info(f"Updating waterbody: {uid}   {idx + 1}/{len(uids)}")
+        _log.info(f"Updating dynamic attributes for waterbody: {uid}   {idx + 1}/{len(uids)}")
 
         try:
             # Check the uid provided exists in the waterbodies_historical_extent table.
@@ -74,15 +74,14 @@ def update_dynamic_attrs(verbose, uids_list_file):
                 _log.error(e)
                 raise e
 
-            _log.info(f"Updating last valid wet observation for waterbody {uid}")
-
+            _log.info(f"Loading timeseries for waterbody {uid} ...")
             timeseries = get_waterbody_timeseries(
                 engine=engine, uid=uid, start_date=start_date, end_date=end_date
             ).sort_values(by="date")
 
             if timeseries.empty:
                 _log.info(
-                    f"No obervations available for waterbody {uid} "
+                    f"No observations available for waterbody {uid} "
                     f"for the time range {start_date} to {end_date}"
                 )
                 update_statement = (
@@ -97,7 +96,7 @@ def update_dynamic_attrs(verbose, uids_list_file):
 
                 if valid_timeseries.empty:
                     _log.info(
-                        f"No valid obervations available for waterbody {uid} "
+                        f"No valid observations available for waterbody {uid} "
                         f"for the time range {start_date} to {end_date}"
                     )
                     update_statement = (
@@ -106,6 +105,8 @@ def update_dynamic_attrs(verbose, uids_list_file):
                         .values(last_attrs_update_date=last_attrs_update_date)
                     )
                 else:
+                    _log.info(f"Updating last valid wet observation for waterbody {uid}")
+
                     # Most recent date the waterbody was observed
                     last_obs_date = timeseries.date.iloc[-1].strftime("%Y-%m-%d")
 
