@@ -38,6 +38,12 @@ def update_dynamic_attrs(verbose, uids_list_file):
 
     table = create_waterbodies_historical_extent_table(engine=engine)
 
+    start_date = "1984-01-01"
+    end_date = datetime.now().strftime("%Y-%m-%d")
+
+    # The date when attributes in the database were last updated
+    last_attrs_update_date = datetime.today().strftime("%Y-%m-%d")
+
     fs = get_filesystem(path=uids_list_file, anon=True)
     with fs.open(uids_list_file) as file:
         content = file.read()
@@ -68,43 +74,59 @@ def update_dynamic_attrs(verbose, uids_list_file):
                 _log.error(e)
                 raise e
 
-            _log.info(f"Updating last valid observation date and wetness for waterbody {uid}")
-
-            start_date: str = "1984-01-01"
-            end_date: str = datetime.now().strftime("%Y-%m-%d")
+            _log.info(f"Updating last valid wet observation for waterbody {uid}")
 
             timeseries = get_waterbody_timeseries(
                 engine=engine, uid=uid, start_date=start_date, end_date=end_date
             ).sort_values(by="date")
-            valid_timeseries = timeseries[
-                (timeseries["percent_observed"] > 85) & (timeseries["percent_invalid"] < 5)
-            ].sort_values(by="date")
 
-            # Most recent date the waterbody was observed
-            last_obs_date = timeseries.date.iloc[-1].strftime("%Y-%m-%d")
-
-            # Most recent date a valid wet observation was recorded for the waterbody.
-            last_valid_obs_date = valid_timeseries.date.iloc[-1].strftime("%Y-%m-%d")
-            # Most recent valid wet observation for the waterbody (%)
-            last_valid_obs = valid_timeseries.percent_wet.iloc[-1]
-
-            # The date that the last_obs_date, last_valid_obs_date and last_valid_obs attributes
-            # were last updated.
-            last_update_date = datetime.today().strftime("%Y-%m-%d")
-
-            # Update the attributes
-            update_statement = (
-                update(table)
-                .where(table.c.uid == uid)
-                .values(
-                    dict(
-                        last_obs_date=last_obs_date,
-                        last_valid_obs_date=last_valid_obs_date,
-                        last_valid_obs=last_valid_obs,
-                        last_update_date=last_update_date,
-                    )
+            if timeseries.empty:
+                _log.info(
+                    f"No obervations available for waterbody {uid} "
+                    f"for the time range {start_date} to {end_date}"
                 )
-            )
+                update_statement = (
+                    update(table)
+                    .where(table.c.uid == uid)
+                    .values(last_attrs_update_date=last_attrs_update_date)
+                )
+            else:
+                valid_timeseries = timeseries[
+                    (timeseries["percent_observed"] > 85) & (timeseries["percent_invalid"] < 5)
+                ].sort_values(by="date")
+
+                if valid_timeseries.empty:
+                    _log.info(
+                        f"No valid obervations available for waterbody {uid} "
+                        f"for the time range {start_date} to {end_date}"
+                    )
+                    update_statement = (
+                        update(table)
+                        .where(table.c.uid == uid)
+                        .values(last_attrs_update_date=last_attrs_update_date)
+                    )
+                else:
+                    # Most recent date the waterbody was observed
+                    last_obs_date = timeseries.date.iloc[-1].strftime("%Y-%m-%d")
+
+                    # Most recent date a valid wet observation was recorded for the waterbody.
+                    last_valid_obs_date = valid_timeseries.date.iloc[-1].strftime("%Y-%m-%d")
+                    # Most recent valid wet observation for the waterbody (%)
+                    last_valid_obs = valid_timeseries.percent_wet.iloc[-1]
+
+                    # Update the attributes
+                    update_statement = (
+                        update(table)
+                        .where(table.c.uid == uid)
+                        .values(
+                            dict(
+                                last_obs_date=last_obs_date,
+                                last_valid_obs_date=last_valid_obs_date,
+                                last_valid_obs=last_valid_obs,
+                                last_attrs_update_date=last_attrs_update_date,
+                            )
+                        )
+                    )
 
             with Session.begin() as session:
                 session.execute(update_statement)
