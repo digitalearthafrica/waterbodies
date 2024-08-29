@@ -625,14 +625,8 @@ def get_waterbody_timeseries(
         "(area_observed_m2/actual_area_m2) * 100 AS percent_observed FROM waterbody_stats)"
     )
 
-    # Get the valid observations
-    part_5 = (
-        "filtered_stats AS "
-        "(SELECT * FROM waterbody_stats_pc WHERE percent_observed > 85 AND percent_invalid < 5)"
-    )
-
-    final_select_query = "SELECT * FROM filtered_stats ORDER BY date"
-    sql_query = f"{part_1}, {part_2}, {part_3}, {part_4}, {part_5} {final_select_query}"
+    final_select_query = "SELECT * FROM waterbody_stats_pc ORDER BY date"
+    sql_query = f"{part_1}, {part_2}, {part_3}, {part_4} {final_select_query}"
 
     timeseries = pd.read_sql(con=engine, sql=sql_query)
 
