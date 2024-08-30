@@ -25,8 +25,6 @@ let
       # Create the required environment:
       if ! test -d $MAMBA_ROOT_PREFIX/envs/waterbodies-env; then
           micromamba create --yes -f environment.yml
-          # Install the git-hook scripts
-          pre-commit install
       fi
 
       # Activate the environment.

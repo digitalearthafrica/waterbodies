@@ -16,6 +16,10 @@ class WaterbodyHistoricalExtent(WaterbodyBase):
     length_m: Mapped[float] = Column(Float)
     perim_m: Mapped[float] = Column(Float)
     geometry = Column(Geometry(geometry_type="POLYGON"))
+    last_obs_date: Mapped[datetime] = Column(Date)
+    last_valid_obs_date: Mapped[datetime] = Column(Date)
+    last_valid_obs: Mapped[float] = Column(Float)
+    last_attrs_update_date: Mapped[datetime] = Column(Date)
 
     def __repr__(self) -> str:
         return f"WaterbodyHistoricalExtent(uid={self.uid!r}, wb_id={self.wb_id!r}, ...)"
