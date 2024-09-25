@@ -214,9 +214,25 @@
           </ogc:Filter>
           <PolygonSymbolizer>
             <Fill>
-              <CssParameter name="fill">#b7b7b7</CssParameter>
+              <GraphicFill>
+                <Graphic>
+                  <Mark>
+                    <WellKnownName>shape://times</WellKnownName>
+                    <Stroke>
+                      <CssParameter name="stroke">#23d9f1</CssParameter>
+                      <CssParameter name="stroke-opacity">1</CssParameter>
+                    </Stroke>
+                  </Mark>
+                </Graphic>
+              </GraphicFill>
             </Fill>
-          </PolygonSymbolizer>
+            <Stroke>
+              <CssParameter name="stroke">#23d9f1</CssParameter>
+              <CssParameter name="stroke-opacity">1</CssParameter>
+              <CssParameter name="stroke-width">1</CssParameter>
+              <CssParameter name="stroke-linejoin">bevel</CssParameter>
+            </Stroke>
+        </PolygonSymbolizer>
         </Rule>
       </FeatureTypeStyle>
     </UserStyle>
