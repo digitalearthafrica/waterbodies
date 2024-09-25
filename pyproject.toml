@@ -54,6 +54,7 @@ lint = [
     "pre-commit",
 ]
 dev = [
+    "lxml",
     "pip-tools",
     "waterbodies[tests, lint]",
 ]
