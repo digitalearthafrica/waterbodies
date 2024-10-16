@@ -17,10 +17,10 @@ requires-python = ">=3.9"
 dynamic = ["version"]
 dependencies = [
     "click",
-    "datacube",
+    "datacube[s3, performance]",
     "fsspec",
     "geoalchemy2",
-    "geopandas",
+    "geopandas[all]",
     "numpy",
     "odc-dscache",
     "odc-geo",
@@ -36,7 +36,7 @@ dependencies = [
     "alembic",
     "toolz",
     "tqdm",
-    "xarray",
+    "xarray[complete]",
 ]
 
 [project.optional-dependencies]
@@ -47,17 +47,13 @@ tests = [
 ]
 lint = [
     "black[jupyter]",
-    # TODO remove constraint after the next sandbox image upgrade
     "flake8",
     "mypy",
     "isort>=5.0.0",
     "pre-commit",
 ]
-dev = [
-    "lxml",
-    "pip-tools",
-    "waterbodies[tests, lint]",
-]
+viz = ["lxml"]
+dev = ["waterbodies[tests, lint, viz]"]
 
 [project.urls]
 Repository = "https://github.com/digitalearthafrica/waterbodies.git"
