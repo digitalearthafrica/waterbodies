@@ -19,7 +19,7 @@ from waterbodies.logs import logging_setup
 
 @click.command(
     name="update-dynamic-attrs",
-    help="Update the dynamic attrs table for a list of waterbodies.",
+    help="Update the dynamic attributes of a list of waterbodies.",
     no_args_is_help=True,
 )
 @click.option("-v", "--verbose", default=1, count=True)
@@ -28,7 +28,14 @@ from waterbodies.logs import logging_setup
     type=str,
     help="Path to the text file containing the list of waterbody uids.",
 )
-def update_dynamic_attrs(verbose, uids_list_file):
+@click.option(
+    "--start-date",
+    type=str,
+    default="1984-01-01",
+    show_default=True,
+    help=("Start date of the time range to query a waterbody's timeseries for. "),
+)
+def update_dynamic_attrs(verbose, uids_list_file, start_date):
     logging_setup(verbose)
     _log = logging.getLogger(__name__)
 
@@ -38,7 +45,6 @@ def update_dynamic_attrs(verbose, uids_list_file):
 
     table = create_waterbodies_historical_extent_table(engine=engine)
 
-    start_date = "1984-01-01"
     end_date = datetime.now().strftime("%Y-%m-%d")
 
     # The date when attributes in the database were last updated
@@ -74,7 +80,10 @@ def update_dynamic_attrs(verbose, uids_list_file):
                 _log.error(e)
                 raise e
 
-            _log.info(f"Loading timeseries for waterbody {uid} ...")
+            _log.info(
+                f"Loading timeseries for waterbody {uid} for the time range "
+                f"{start_date} to {end_date} ..."
+            )
             timeseries = get_waterbody_timeseries(
                 engine=engine, uid=uid, start_date=start_date, end_date=end_date
             ).sort_values(by="date")
