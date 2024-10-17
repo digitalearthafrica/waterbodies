@@ -1,8 +1,9 @@
-FROM osgeo/gdal:ubuntu-small-3.6.3
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.5
 
-ENV SHELL=bash
-
-ENV DEBIAN_FRONTEND=non-interactive
+ENV SHELL=bash \
+    DEBIAN_FRONTEND=non-interactive \
+    USE_PYGEOS=0 \
+    SPATIALITE_LIBRARY_PATH='mod_spatialite.so'
 
 # Update sources list.
 RUN apt clean && apt update \
@@ -17,7 +18,7 @@ RUN apt clean && apt update \
   # Install pip3.
   && apt install -y --fix-missing --no-install-recommends \
     python3-pip \
-  && python -m pip install --upgrade pip \
+  && python -m pip install --upgrade pip pip-tools \
   # For psycopg2
   && apt install -y libpq-dev \ 
   # For hdstats
