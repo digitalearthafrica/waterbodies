@@ -10,6 +10,7 @@ from waterbodies.historical_extent import get_waterbodies
 from waterbodies.io import check_directory_exists, check_file_exists, get_filesystem
 from waterbodies.logs import logging_setup
 from waterbodies.text import get_tile_index_str_from_tuple
+from waterbodies.utils import TaskFailedError
 
 
 @click.command(
@@ -136,3 +137,5 @@ def process_tasks(
         with fs.open(failed_tasks_output_file, "a") as file:
             file.write(failed_tasks_json_array + "\n")
         _log.info(f"Failed tasks written to {failed_tasks_output_file}")
+
+        raise TaskFailedError(f"{len(failed_tasks)} tasks failed")

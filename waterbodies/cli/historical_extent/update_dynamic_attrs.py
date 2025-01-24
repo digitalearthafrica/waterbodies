@@ -15,6 +15,7 @@ from waterbodies.historical_extent import (
 )
 from waterbodies.io import check_directory_exists, get_filesystem
 from waterbodies.logs import logging_setup
+from waterbodies.utils import TaskFailedError
 
 
 @click.command(
@@ -160,3 +161,8 @@ def update_dynamic_attrs(verbose, uids_list_file, start_date):
         with fs.open(failed_uids_output_file, "a") as file:
             file.write(failed_uids_json_array + "\n")
         _log.info(f"Failed uids written to {failed_uids_output_file}")
+
+        raise TaskFailedError(
+            f"Dynamic attributes for {len(failed_uids)} \
+                              waterbodies failed to update."
+        )

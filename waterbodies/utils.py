@@ -124,3 +124,10 @@ def rio_slurp_xarray(fname, *args, rgb="auto", **kw):
     coords = xr_coords(mm.gbox, crs_coord_name="spatial_ref")
 
     return DataArray(im, dims=dims, coords=coords, attrs=dict(nodata=mm.nodata))
+
+
+class TaskFailedError(Exception):
+    """General exception for failed tasks."""
+
+    def __init__(self, message="One or more tasks have failed."):
+        super().__init__(message)
