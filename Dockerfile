@@ -1,4 +1,4 @@
-FROM ghcr.io/osgeo/gdal:ubuntu-small-3.8.5
+FROM ghcr.io/osgeo/gdal:ubuntu-small-3.10.1
 
 ENV SHELL=bash \
     DEBIAN_FRONTEND=non-interactive \
@@ -7,20 +7,18 @@ ENV SHELL=bash \
 
 # Update sources list.
 RUN apt clean && apt update \
+  && apt install -y --fix-missing --no-install-recommends \
   # Install basic tools for developer convenience.
-  && apt install -y \
     curl \
     git \
     tmux \ 
     unzip \
     vim  \
     jq \
-  # Install pip3.
-  && apt install -y --fix-missing --no-install-recommends \
-    python3-pip \
-  && python -m pip install --upgrade pip pip-tools \
+  # Install python and tools
+    python3-full \
   # For psycopg2
-  && apt install -y libpq-dev \ 
+    libpq-dev \ 
   # For hdstats
     python3-dev \
     build-essential \
@@ -40,15 +38,20 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 RUN unzip awscliv2.zip
 RUN ./aws/install
 
-# Copy requirements.txt and install python packages from requirements.txt.
-RUN mkdir -p /conf
-COPY requirements.txt /conf/
-RUN pip install -r /conf/requirements.txt
+# Configure and set up python virtual environment
+ENV VIRTUAL_ENV="/opt/venv"
+ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
+RUN python3 -m venv $VIRTUAL_ENV
 
 # Copy source code.
 RUN mkdir -p /code
 WORKDIR /code
 ADD . /code
+
+# Install required python packages from requirements.txt.
+RUN python -m pip install --upgrade pip pip-tools
+RUN pip install -r requirements.txt
+
 # Install source code.
 RUN echo "Installing waterbodies through the Dockerfile."
 RUN pip install .
