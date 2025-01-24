@@ -1,2 +1,2 @@
-# To match gdal version in osgeo/gdal base image
-gdal==3.8.5
+# Should match version in the base osgeo/gdal image
+GDAL[numpy]==3.10.1

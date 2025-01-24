@@ -54,4 +54,4 @@ logs: ## Show the logs from the stack
 	docker compose logs --follow
 
 pip_compile:
-	pip-compile --output-file=requirements.txt pyproject.toml
+	pip-compile --extra=lint --extra=tests --extra=viz --output-file=requirements.txt pyproject.toml requirements.in --verbose --upgrade  
