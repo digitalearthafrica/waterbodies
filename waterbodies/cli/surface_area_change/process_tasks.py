@@ -15,6 +15,7 @@ from waterbodies.surface_area_change import (  # noqa F401
     get_waterbody_observations,
 )
 from waterbodies.text import get_task_id_str_from_tuple
+from waterbodies.utils import TaskFailedError
 
 
 @click.command(
@@ -161,3 +162,5 @@ def process_tasks(
         with fs.open(failed_tasks_output_file, "a") as file:
             file.write(failed_tasks_json_array + "\n")
         _log.info(f"Failed tasks written to {failed_tasks_output_file}")
+
+        raise TaskFailedError(f"{len(failed_tasks)} tasks failed")

@@ -2,8 +2,8 @@ name: waterbodies-env
 channels:
   - conda-forge
 dependencies:
-  - python = 3.10.12
-  - gdal = 3.8.5
+  - python = 3.12.3
+  - gdal = 3.10.1
   - pip-tools
   - pip:
       - -r requirements.txt
